@@ -18,6 +18,7 @@ const MIN_INTERVAL: u16 = 200;
 const MAX_SPEED: u16 = 20;
 
 
+
 #[derive(Debug)]
 pub struct Game {
     stdout: Stdout,
