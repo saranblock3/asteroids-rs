@@ -53,7 +53,7 @@ impl Game {
         let mut rng = rand::thread_rng();
         let mut asteroid = Asteroid::new(rng.gen_range(0, self.width), 0);
 
-        let mut bullet = Bullet::new(self.ship.point.x, self.height);
+        let mut bullet = Bullet::new(self.ship.point.x, self.height - 1);
 
         let mut done = false;
         while !done {
@@ -68,8 +68,19 @@ impl Game {
             if asteroid.point.y == self.height {
                 asteroid.point.x = rng.gen_range(0, self.width);
                 asteroid.point.y = 0;
+                self.lives -= 1;
+            }
+            if asteroid.point == self.ship.point {
+                self.lives -= 3;
+                break;
+            }
+            if self.lives == 0 {
+                done = true;
+                break;
             }
             self.draw_bullet(&bullet);
+            
+            self.draw_ship();
 
 
             while now.elapsed() < interval {
@@ -96,6 +107,20 @@ impl Game {
                 }
             }
 
+            if bullet.point.x == asteroid.point.x && bullet.point.y <= asteroid.point.y {
+                bullet.point = self.ship.point;
+                asteroid.point.x = rng.gen_range(0, self.width);
+                asteroid.point.y = 0;
+                self.ship.shooting = false;
+                self.score += 1;
+
+            }
+
+            if bullet.point.y == 0 {
+                bullet.point = self.ship.point;
+                self.ship.shooting = false;
+            }
+
             if self.ship.shooting == true {
                 bullet.shoot();
             }
@@ -118,7 +143,6 @@ impl Game {
     fn render(&mut self) {
         self.draw_borders();
         self.draw_background();
-        self.draw_ship();
     }
 
     fn draw_borders(&mut self) {
@@ -126,28 +150,34 @@ impl Game {
         for y in 0..self.height + 2 {
             self.stdout
                 .execute(MoveTo(0, y)).unwrap()
-                .execute(Print("#")).unwrap()
+                .execute(Print("|")).unwrap()
                 .execute(MoveTo(self.width + 1, y)).unwrap()
-                .execute(Print("#")).unwrap();
+                .execute(Print("|")).unwrap();
         }
 
         for x in 0..self.width + 2 {
             self.stdout
                 .execute(MoveTo(x, 0)).unwrap()
-                .execute(Print("#")).unwrap()
+                .execute(Print("_")).unwrap()
                 .execute(MoveTo(x, self.height + 1)).unwrap()
-                .execute(Print("#")).unwrap();
+                .execute(Print("-")).unwrap();
         }
 
         self.stdout
             .execute(MoveTo(0, 0)).unwrap()
-            .execute(Print("#")).unwrap()
+            .execute(Print("_")).unwrap()
             .execute(MoveTo(self.width + 1, self.height + 1)).unwrap()
-            .execute(Print("#")).unwrap()
+            .execute(Print("-")).unwrap()
             .execute(MoveTo(self.width + 1, 0)).unwrap()
-            .execute(Print("#")).unwrap()
+            .execute(Print("_")).unwrap()
             .execute(MoveTo(0, self.height + 1)).unwrap()
-            .execute(Print("#")).unwrap();
+            .execute(Print("-")).unwrap();
+
+        self.stdout
+            .execute(MoveTo(0, self.height + 2)).unwrap()
+            .execute(Print(format!("{}{}", "Lives: ", self.lives.to_string()))).unwrap()
+            .execute(MoveTo(0, self.height + 3)).unwrap()
+            .execute(Print(format!("{}{}", "Score: ", self.score.to_string()))).unwrap();
     }
 
     fn draw_background(&mut self) {
