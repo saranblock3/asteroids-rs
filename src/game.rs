@@ -1,5 +1,5 @@
 use std::io::Stdout;
-use crate::ship::Ship;
+use crate::ship::{Ship, Bullet, Asteroid};
 use crate::command::Command;
 use crate::point::Point;
 use crate::direction::Direction;
@@ -24,6 +24,7 @@ pub struct Game {
     stdout: Stdout,
     width: u16,
     height: u16,
+    original_terminal_size: (u16, u16),
     ship: Ship,
     speed: u16,
     score: u16,
@@ -32,12 +33,14 @@ pub struct Game {
 
 impl Game {
     pub fn new(stdout: Stdout, width: u16, height: u16) -> Self {
+        let original_terminal_size: (u16, u16) = size().unwrap();
         Self {
             stdout,
             width,
             height,
-            ship: Ship::new(width/2, height),
-            speed: 0,
+            original_terminal_size,
+            ship: Ship::new(0, height - 1),
+            speed: 10,
             score: 0,
             lives: 3,
         }
@@ -47,11 +50,27 @@ impl Game {
         self.prepare_ui();
         self.render();
 
+        let mut rng = rand::thread_rng();
+        let mut asteroid = Asteroid::new(rng.gen_range(0, self.width), 0);
+
+        let mut bullet = Bullet::new(self.ship.point.x, self.height);
+
         let mut done = false;
         while !done {
+            if self.ship.shooting == false {
+                bullet.point.x = self.ship.point.x;
+            }
             let interval = self.calculate_interval();
             let direction = self.ship.get_direction();
             let now = Instant::now();
+            self.draw_asteroid(&asteroid);
+            asteroid.fall();
+            if asteroid.point.y == self.height {
+                asteroid.point.x = rng.gen_range(0, self.width);
+                asteroid.point.y = 0;
+            }
+            self.draw_bullet(&bullet);
+
 
             while now.elapsed() < interval {
                 if let Some(command) = self.get_command(interval - now.elapsed()) {
@@ -62,16 +81,30 @@ impl Game {
                         }
                         Command::Move(towards) => {
                             self.ship.set_direction(towards);
-                            self.ship.slide();
+                            if self.ship.point.x > 0 && self.ship.point.x < self.width - 1 {
+                                self.ship.slide();
+                            }
+                            else if self.ship.point.x == 0 && self.ship.direction == Direction::Right || self.ship.point.x == self.width - 1 && self.ship.direction == Direction::Left {
+                                self.ship.slide();
+                            }
+
                         }
                         Command::Shoot => {
+                            self.ship.shooting = true;
                         }
                     }
                 }
             }
 
+            if self.ship.shooting == true {
+                bullet.shoot();
+            }
+
+
             self.render();
         }
+
+        self.restore_ui();
     }
 
     fn prepare_ui(&mut self) {
@@ -140,6 +173,27 @@ impl Game {
             .execute(Print(symbol)).unwrap();
     }
 
+    pub fn draw_asteroid(&mut self, asteroid: &Asteroid) {
+        let asteroid_point = asteroid.point;
+
+        let symbol = '*';
+
+        self.stdout
+            .execute(MoveTo(asteroid_point.x + 1, asteroid_point.y + 1)).unwrap()
+            .execute(Print(symbol)).unwrap();
+    }
+
+    fn draw_bullet(&mut self, bullet: &Bullet) {
+        let bullet_point = bullet.point;
+
+        let symbol = '"';
+
+        self.stdout
+            .execute(MoveTo(bullet_point.x + 1, bullet_point.y + 1)).unwrap()
+            .execute(Print(symbol)).unwrap();
+    }
+
+
     fn calculate_interval(&self) -> Duration {
         let speed = MAX_SPEED - self.speed;
         Duration::from_millis(
@@ -160,6 +214,7 @@ impl Game {
                 }
             KeyCode::Right => Some(Command::Move(Direction::Right)),
             KeyCode::Left => Some(Command::Move(Direction::Left)),
+            KeyCode::Char('f') => Some(Command::Shoot),
             _ => None
         }
     }
@@ -172,5 +227,15 @@ impl Game {
             }
         }
         None
+    }
+
+    fn restore_ui(&mut self) {
+        let (cols, rows) = self.original_terminal_size;
+        self.stdout
+            .execute(SetSize(cols, rows)).unwrap()
+            .execute(Clear(ClearType::All)).unwrap()
+            .execute(Show).unwrap()
+            .execute(ResetColor).unwrap();
+        disable_raw_mode().unwrap();
     }
 }

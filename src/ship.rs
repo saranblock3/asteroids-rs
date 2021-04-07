@@ -4,9 +4,9 @@ use crate::direction::Direction;
 
 #[derive(Debug)]
 pub struct Ship {
-    point: Point,
-    shooting: bool,
-    direction: Direction,
+    pub point: Point,
+    pub shooting: bool,
+    pub direction: Direction,
 }
 
 impl Ship {
@@ -31,6 +31,44 @@ impl Ship {
     }
 
     pub fn slide(&mut self) {
-        self.point.transform(self.direction);
+        self.point = self.point.transform(self.direction);
+    }
+}
+
+#[derive(Debug)]
+pub struct Bullet {
+    pub point: Point,
+    pub direction: Direction,
+}
+
+impl Bullet {
+    pub fn new(x: u16, y: u16) -> Self {
+        Self {
+            point: Point::new(x, y),
+            direction: Direction::Up,
+        }
+    }
+
+    pub fn shoot(&mut self) {
+        self.point = self.point.transform(self.direction);
+    }
+}
+
+#[derive(Debug)]
+pub struct Asteroid {
+    pub point: Point,
+    pub direction: Direction,
+}
+
+impl Asteroid {
+    pub fn new(x: u16, y: u16) -> Self {
+        Self {
+            point: Point::new(x, y),
+            direction: Direction::Down,
+        }
+    }
+
+    pub fn fall(&mut self) {
+        self.point = self.point.transform(self.direction);
     }
 }
