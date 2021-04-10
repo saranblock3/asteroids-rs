@@ -216,6 +216,10 @@ impl Game {
     fn draw_bullet(&mut self, bullet: &Bullet) {
         let bullet_point = bullet.point;
 
+        let fg = SetForegroundColor(Color::Red);
+
+        self.stdout.execute(fg).unwrap();
+
         let symbol = '"';
 
         self.stdout
