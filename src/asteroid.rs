@@ -2,6 +2,8 @@ use crate::point::Point;
 use crate::direction::Direction;
 
 // This is a test comment
+// This is a second test comment
+
 
 #[derive(Debug)]
 pub struct Asteroid {
